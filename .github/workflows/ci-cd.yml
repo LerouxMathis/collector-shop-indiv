@@ -186,9 +186,8 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:8081/api/articles'
-          # Le paramètre 'format' a été supprimé car il est obsolète dans v0.12.0. 
-          # L'action génère de toute façon les fichiers report_md.md, report_html.html et report_json.json
-        continue-on-error: true
+          fail_action: false # Ne fait pas échouer le pipeline si des alertes sont trouvées
+          allow_issue_writing: false # Empêche l'action d'essayer de créer une Issue GitHub (qui cause l'erreur de permission)
 
       - name: 📁 Upload ZAP Report
         uses: actions/upload-artifact@v4
