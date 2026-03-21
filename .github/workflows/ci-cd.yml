@@ -125,29 +125,30 @@ jobs:
       - name: 🔓 Fix Permissions for ZAP
         run: chmod -R 777 $GITHUB_WORKSPACE
       
-      - name: 🚀 Lancement de l'infrastructure de test (DB + IAM)
+      - name: 🚀 Lancement de l'infrastructure de test robuste
         run: |
-          # 1. Démarrage de la base de données
-          docker run -d --name db-test -p 5432:5432 -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
+          # 1. Démarrage de la DB et Keycloak sur le réseau hôte
+          docker run -d --name db-test --network="host" -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
+          docker run -d --name keycloak-test --network="host" -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:24.0.1 start-dev
           
-          # 2. Démarrage d'un Keycloak éphémère pour valider le démarrage de Spring Security
-          docker run -d --name keycloak-test -p 8080:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:24.0.1 start-dev
+          echo "⏳ Attente du démarrage complet de Keycloak (peut prendre 45s+ sur GitHub Actions)..."
+          # Boucle infinie qui teste l'URL de Keycloak. S'arrête quand Keycloak répond.
+          until curl -s -f http://localhost:8080/realms/master/.well-known/openid-configuration > /dev/null; do
+            echo "Keycloak charge toujours... on patiente 5 secondes."
+            sleep 5
+          done
+          echo "✅ Keycloak est UP et prêt à servir !"
           
-          echo "⏳ Attente de l'initialisation de Postgres et Keycloak (20s)..."
-          sleep 20
-          
-          # 3. Build du conteneur API
+          # 2. Build de l'API
           cat <<EOF > Dockerfile
           FROM eclipse-temurin:17-jdk-alpine
           COPY target/*.jar app.jar
           ENTRYPOINT ["java","-jar","/app.jar"]
           EOF
-          
           mvn clean package -DskipTests
           docker build -t catalog-test .
           
-          # 4. Lancement de l'API avec le réseau de l'hôte (--network="host") 
-          # et surcharge de la variable Keycloak vers notre mock local
+          # 3. Lancement de l'API
           docker run -d --name api-test --network="host" \
             -e DB_HOST=localhost \
             -e DB_USER=postgres \
@@ -156,11 +157,13 @@ jobs:
             -e SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/master \
             catalog-test
             
-          echo "⏳ Attente du démarrage de Spring Boot (15s)..."
-          sleep 15
-          
-          # Affichage des logs Spring Boot pour la traçabilité dans GitHub Actions
-          docker logs api-test
+          echo "⏳ Attente du démarrage de Spring Boot..."
+          # Boucle qui attend que l'API réponde (même si c'est une erreur 401 Non Autorisé, ça prouve que l'API tourne)
+          until curl -s http://localhost:8081/api/articles > /dev/null; do
+            echo "Spring Boot démarre... on patiente 5 secondes."
+            sleep 5
+          done
+          echo "✅ L'API est UP ! ZAP peut lancer son attaque."
         working-directory: services/catalog-service
 
       - name: 🕷️ OWASP ZAP Baseline Scan
