@@ -47,7 +47,7 @@ jobs:
           npm run build
         working-directory: frontend/collector-app
 
-  # ==========================================
+# ==========================================
   # 2. ANALYSE STATIQUE DE SÉCURITÉ (SAST)
   # ==========================================
   sonar-analysis:
@@ -57,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Requis pour que Sonar puisse analyser l'historique de la branche main
           
       - name: ☕ Setup Java 17
         uses: actions/setup-java@v3
@@ -67,16 +67,16 @@ jobs:
 
       - name: 🔍 SonarCloud Scan (Catalog Service)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Laisse ceci tel quel, GitHub le gère
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Ton secret que tu as bien configuré
         run: |
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-          -Dsonar.projectKey=collector-shop_catalog \
-          -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.projectKey=LerouxMathis_collector-shop-indiv \
+          -Dsonar.organization=lerouxmathis \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.branch.name=main
         working-directory: services/catalog-service
-        # Le step ne crashera pas si les secrets ne sont pas encore configurés (idéal pour ton POC)
-        continue-on-error: true 
+        continue-on-error: true
 
 # ==========================================
   # 3. BUILD DOCKER ET REGISTRY
