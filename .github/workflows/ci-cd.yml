@@ -125,15 +125,18 @@ jobs:
       - name: 🔓 Fix Permissions for ZAP
         run: chmod -R 777 $GITHUB_WORKSPACE
       
-      - name: 🚀 Lancement de la DB et du service Catalog
+      - name: 🚀 Lancement de l'infrastructure de test (DB + IAM)
         run: |
-          # 1. On démarre un PostgreSQL éphémère pour le CI
+          # 1. Démarrage de la base de données
           docker run -d --name db-test -p 5432:5432 -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
           
-          # On laisse 10 secondes à Postgres pour s'allumer
-          sleep 10
+          # 2. Démarrage d'un Keycloak éphémère pour valider le démarrage de Spring Security
+          docker run -d --name keycloak-test -p 8080:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:24.0.1 start-dev
           
-          # 2. Création du Dockerfile
+          echo "⏳ Attente de l'initialisation de Postgres et Keycloak (20s)..."
+          sleep 20
+          
+          # 3. Build du conteneur API
           cat <<EOF > Dockerfile
           FROM eclipse-temurin:17-jdk-alpine
           COPY target/*.jar app.jar
@@ -143,13 +146,20 @@ jobs:
           mvn clean package -DskipTests
           docker build -t catalog-test .
           
-          # 3. Lancement du Backend avec les bons identifiants vers le Postgres éphémère
-          docker run -d --name api-test -p 8081:8081 -e DB_HOST=localhost -e DB_USER=postgres -e DB_PASSWORD=postgres -e KAFKA_BOOTSTRAP=localhost:9092 catalog-test
+          # 4. Lancement de l'API avec le réseau de l'hôte (--network="host") 
+          # et surcharge de la variable Keycloak vers notre mock local
+          docker run -d --name api-test --network="host" \
+            -e DB_HOST=localhost \
+            -e DB_USER=postgres \
+            -e DB_PASSWORD=postgres \
+            -e KAFKA_BOOTSTRAP=localhost:9092 \
+            -e SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/master \
+            catalog-test
+            
+          echo "⏳ Attente du démarrage de Spring Boot (15s)..."
+          sleep 15
           
-          # On attend 30 secondes que Spring Boot démarre complètement
-          sleep 30 
-          
-          # Affichage des logs Spring Boot (très utile pour débugger si ZAP échoue encore)
+          # Affichage des logs Spring Boot pour la traçabilité dans GitHub Actions
           docker logs api-test
         working-directory: services/catalog-service
 
