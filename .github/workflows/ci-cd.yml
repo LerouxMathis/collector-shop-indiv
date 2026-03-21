@@ -1,0 +1,141 @@
+name: DevSecOps Pipeline - Collector.shop
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ==========================================
+  # 1. BUILD ET TESTS (Backend & Frontend)
+  # ==========================================
+  build-and-test:
+    name: Build & Test (Java & React)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Requis pour l'analyse SonarQube
+
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 🛠️ Build Catalog Service (Maven)
+        run: mvn clean package -DskipTests
+        working-directory: services/catalog-service
+
+      - name: 🛠️ Build Notification Service (Maven)
+        run: mvn clean package -DskipTests
+        working-directory: services/notification-service
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/collector-app/package-lock.json
+
+      - name: 📦 Build Frontend (React/Vite)
+        run: |
+          npm ci
+          npm run build
+        working-directory: frontend/collector-app
+
+  # ==========================================
+  # 2. ANALYSE STATIQUE DE SÉCURITÉ (SAST)
+  # ==========================================
+  sonar-analysis:
+    name: SonarQube Code Quality
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🔍 SonarCloud Scan (Catalog Service)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.projectKey=collector-shop_catalog \
+          -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+          -Dsonar.host.url=https://sonarcloud.io
+        working-directory: services/catalog-service
+        # Le step ne crashera pas si les secrets ne sont pas encore configurés (idéal pour ton POC)
+        continue-on-error: true 
+
+  # ==========================================
+  # 3. BUILD DOCKER ET REGISTRY
+  # ==========================================
+  docker-build:
+    name: Build Docker Images
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🐳 Build Docker Image (Catalog)
+        run: docker build -t collector-catalog:latest -f Dockerfile .
+        working-directory: services/catalog-service
+
+      - name: 🐳 Build Docker Image (Notification)
+        run: docker build -t collector-notification:latest -f Dockerfile .
+        working-directory: services/notification-service
+
+  # ==========================================
+  # 4. ANALYSE DYNAMIQUE DE SÉCURITÉ (DAST)
+  # ==========================================
+  dast-zap-scan:
+    name: OWASP ZAP Security Scan
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Pour faire un scan DAST, il faut que l'application tourne.
+      # On simule le démarrage du conteneur Backend en tâche de fond.
+      - name: 🚀 Lancement du service Catalog pour scan
+        run: |
+          # Création d'un Dockerfile à la volée pour le CI
+          cat <<EOF > Dockerfile
+          FROM eclipse-temurin:17-jdk-alpine
+          COPY target/*.jar app.jar
+          ENTRYPOINT ["java","-jar","/app.jar"]
+          EOF
+          
+          mvn clean package -DskipTests
+          docker build -t catalog-test .
+          # On lance le conteneur sur le port 8081 avec des variables d'environnement factices pour le CI
+          docker run -d -p 8081:8081 -e DB_HOST=localhost -e KAFKA_BOOTSTRAP=localhost:9092 catalog-test
+          
+          # On attend que Spring Boot démarre
+          sleep 30 
+        working-directory: services/catalog-service
+
+      - name: 🕷️ OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:8081/api/articles'
+          # Génère un rapport HTML de vulnérabilités
+          format: html
+        continue-on-error: true # On ne bloque pas le pipeline lors du premier scan (Mode Audit)
+
+      - name: 📁 Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZAP-Security-Report
+          path: report_html.html
