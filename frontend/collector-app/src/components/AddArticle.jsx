@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../services/api';
+import './AddArticle.css'; // Import des styles du formulaire
 
 const AddArticle = ({ onArticleAdded }) => {
   const [title, setTitle] = useState('');
@@ -23,18 +24,33 @@ const AddArticle = ({ onArticleAdded }) => {
   };
 
   return (
-    <div style={{ padding: '20px', border: '1px solid #ccc', marginTop: '20px' }}>
-      <h3>Vendre un nouvel article</h3>
+    <div className="add-article-container">
+      <h3 className="add-article-title">Vendre une nouvelle pépite</h3>
       <form onSubmit={handleSubmit}>
-        <div>
-          <label>Titre : </label>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required />
+        <div className="form-group">
+          <label className="form-label">Titre de l'objet</label>
+          <input 
+            type="text" 
+            className="form-input"
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)} 
+            placeholder="Ex: Carte Pokémon Dracaufeu Edition 1"
+            required 
+          />
         </div>
-        <div style={{ marginTop: '10px' }}>
-          <label>Prix (€) : </label>
-          <input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required />
+        <div className="form-group">
+          <label className="form-label">Prix souhaité (€)</label>
+          <input 
+            type="number" 
+            step="0.01" 
+            className="form-input"
+            value={price} 
+            onChange={(e) => setPrice(e.target.value)} 
+            placeholder="Ex: 150.00"
+            required 
+          />
         </div>
-        <button type="submit" style={{ marginTop: '10px' }}>Publier l'annonce</button>
+        <button type="submit" className="submit-button">Publier l'annonce</button>
       </form>
     </div>
   );

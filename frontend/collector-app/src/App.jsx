@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import keycloak from './config/keycloak';
 import Catalog from './components/Catalog';
+import Header from './Header';
+import './App.css'; // Import des styles globaux
 
 function App() {
   const [keycloakInitialized, setKeycloakInitialized] = useState(false);
@@ -14,9 +16,7 @@ function App() {
         
         // Mécanisme de rafraîchissement du token (Sécurité Proactive)
         keycloak.onTokenExpired = () => {
-          console.log('Token expiré, rafraîchissement en cours...');
           keycloak.updateToken(30).catch(() => {
-            console.error('Échec du rafraîchissement, déconnexion...');
             keycloak.logout();
           });
         };
@@ -27,26 +27,40 @@ function App() {
   }, []);
 
   if (!keycloakInitialized) {
-    return <div>Chargement de la sécurisation (Connexion à Keycloak)...</div>;
+    return <div style={styles.loading}>Connexion sécurisée en cours...</div>;
   }
 
   if (!authenticated) {
-    return <div>Authentification échouée.</div>;
+    return <div style={styles.error}>Échec de l'authentification.</div>;
   }
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: '40px', maxWidth: '800px', margin: 'auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Collector.shop</h1>
-        <div>
-          <span>Connecté en tant que <strong>{keycloak.tokenParsed?.preferred_username}</strong> </span>
-          <button onClick={() => keycloak.logout()}>Déconnexion</button>
-        </div>
-      </header>
-      <hr />
-      <Catalog />
+    <div>
+      <Header />
+      <main className="main-container">
+        <Catalog />
+      </main>
     </div>
   );
 }
+
+const styles = {
+  loading: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    fontSize: '18px',
+    color: 'var(--primary-color)',
+  },
+  error: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    fontSize: '18px',
+    color: 'red',
+  },
+};
 
 export default App;

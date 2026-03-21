@@ -1,0 +1,74 @@
+.catalog-container {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.catalog-header {
+  margin-bottom: 20px;
+}
+
+.catalog-title {
+  font-size: 32px;
+  fontWeight: '700';
+  margin: 0;
+  color: var(--text-color);
+}
+
+.catalog-subtitle {
+  color: var(--text-secondary);
+  margin: 8px 0 0 0;
+}
+
+.article-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.article-card {
+  background-color: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.article-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent-color);
+}
+
+.article-title {
+  font-size: 18px;
+  font-weight: '600';
+  margin: 0;
+  color: var(--text-color);
+}
+
+.article-price-tag {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.article-price {
+  font-size: 24px;
+  font-weight: '700';
+  color: var(--primary-color);
+}
+
+.article-vendeur {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background-color: #f5f5f5;
+  padding: 4px 8px;
+  borderRadius: '6px';
+}
