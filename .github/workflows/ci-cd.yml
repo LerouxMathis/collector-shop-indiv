@@ -78,7 +78,7 @@ jobs:
         # Le step ne crashera pas si les secrets ne sont pas encore configurés (idéal pour ton POC)
         continue-on-error: true 
 
-  # ==========================================
+# ==========================================
   # 3. BUILD DOCKER ET REGISTRY
   # ==========================================
   docker-build:
@@ -88,9 +88,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 🛠️ Génération du .jar (Catalog)
+        run: mvn clean package -DskipTests
+        working-directory: services/catalog-service
+
       - name: 🐳 Build Docker Image (Catalog)
         run: docker build -t collector-catalog:latest -f Dockerfile .
         working-directory: services/catalog-service
+
+      - name: 🛠️ Génération du .jar (Notification)
+        run: mvn clean package -DskipTests
+        working-directory: services/notification-service
 
       - name: 🐳 Build Docker Image (Notification)
         run: docker build -t collector-notification:latest -f Dockerfile .
