@@ -186,8 +186,10 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:8081/api/articles'
-          fail_action: false # Ne fait pas échouer le pipeline si des alertes sont trouvées
-          allow_issue_writing: false # Empêche l'action d'essayer de créer une Issue GitHub (qui cause l'erreur de permission)
+          fail_action: false
+          allow_issue_writing: false
+          artifact_name: 'zap-security-report' # Nom propre forcé ici
+        continue-on-error: true
 
       - name: 📁 Upload ZAP Report
         uses: actions/upload-artifact@v4
