@@ -125,8 +125,15 @@ jobs:
       - name: 🔓 Fix Permissions for ZAP
         run: chmod -R 777 $GITHUB_WORKSPACE
       
-      - name: 🚀 Lancement du service Catalog pour scan
+      - name: 🚀 Lancement de la DB et du service Catalog
         run: |
+          # 1. On démarre un PostgreSQL éphémère pour le CI
+          docker run -d --name db-test -p 5432:5432 -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
+          
+          # On laisse 10 secondes à Postgres pour s'allumer
+          sleep 10
+          
+          # 2. Création du Dockerfile
           cat <<EOF > Dockerfile
           FROM eclipse-temurin:17-jdk-alpine
           COPY target/*.jar app.jar
@@ -135,9 +142,15 @@ jobs:
           
           mvn clean package -DskipTests
           docker build -t catalog-test .
-          docker run -d -p 8081:8081 -e DB_HOST=localhost -e KAFKA_BOOTSTRAP=localhost:9092 catalog-test
           
+          # 3. Lancement du Backend avec les bons identifiants vers le Postgres éphémère
+          docker run -d --name api-test -p 8081:8081 -e DB_HOST=localhost -e DB_USER=postgres -e DB_PASSWORD=postgres -e KAFKA_BOOTSTRAP=localhost:9092 catalog-test
+          
+          # On attend 30 secondes que Spring Boot démarre complètement
           sleep 30 
+          
+          # Affichage des logs Spring Boot (très utile pour débugger si ZAP échoue encore)
+          docker logs api-test
         working-directory: services/catalog-service
 
       - name: 🕷️ OWASP ZAP Baseline Scan
