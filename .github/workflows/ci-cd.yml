@@ -127,19 +127,15 @@ jobs:
       
       - name: 🚀 Lancement de l'infrastructure de test robuste
         run: |
-          # 1. Démarrage de la DB et Keycloak sur le réseau hôte
           docker run -d --name db-test --network="host" -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
           docker run -d --name keycloak-test --network="host" -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:24.0.1 start-dev
           
-          echo "⏳ Attente du démarrage complet de Keycloak (peut prendre 45s+ sur GitHub Actions)..."
-          # Boucle infinie qui teste l'URL de Keycloak. S'arrête quand Keycloak répond.
+          echo "⏳ Attente du démarrage de Keycloak..."
           until curl -s -f http://localhost:8080/realms/master/.well-known/openid-configuration > /dev/null; do
-            echo "Keycloak charge toujours... on patiente 5 secondes."
             sleep 5
           done
-          echo "✅ Keycloak est UP et prêt à servir !"
+          echo "✅ Keycloak est UP !"
           
-          # 2. Build de l'API
           cat <<EOF > Dockerfile
           FROM eclipse-temurin:17-jdk-alpine
           COPY target/*.jar app.jar
@@ -148,20 +144,27 @@ jobs:
           mvn clean package -DskipTests
           docker build -t catalog-test .
           
-          # 3. Lancement de l'API
+          # Lancement de l'API en désactivant Kafka pour le test ZAP
           docker run -d --name api-test --network="host" \
             -e DB_HOST=localhost \
             -e DB_USER=postgres \
             -e DB_PASSWORD=postgres \
-            -e KAFKA_BOOTSTRAP=localhost:9092 \
+            -e SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration \
             -e SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/master \
             catalog-test
             
           echo "⏳ Attente du démarrage de Spring Boot..."
-          # Boucle qui attend que l'API réponde (même si c'est une erreur 401 Non Autorisé, ça prouve que l'API tourne)
+          TIMEOUT=0
           until curl -s http://localhost:8081/api/articles > /dev/null; do
-            echo "Spring Boot démarre... on patiente 5 secondes."
+            echo "Spring Boot démarre... patiente 5 secondes."
             sleep 5
+            TIMEOUT=$((TIMEOUT+5))
+            if [ "$TIMEOUT" -ge 60 ]; then
+              echo "❌ ERREUR: Spring Boot n'a pas démarré après 60s."
+              echo "Voici les logs du conteneur pour comprendre le crash :"
+              docker logs api-test
+              exit 1
+            fi
           done
           echo "✅ L'API est UP ! ZAP peut lancer son attaque."
         working-directory: services/catalog-service
