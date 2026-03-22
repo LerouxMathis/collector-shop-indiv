@@ -27,11 +27,13 @@ jobs:
           cache: maven
 
       - name: 🛠️ Build Catalog Service (Maven)
-        run: mvn clean package -DskipTests
+        # ⚠️ On a retiré -DskipTests ici pour que JUnit s'exécute !
+        run: mvn clean package 
         working-directory: services/catalog-service
 
       - name: 🛠️ Build Notification Service (Maven)
-        run: mvn clean package -DskipTests
+        # ⚠️ On a retiré -DskipTests ici !
+        run: mvn clean package 
         working-directory: services/notification-service
 
       - name: 🟢 Setup Node.js
@@ -44,6 +46,7 @@ jobs:
       - name: 📦 Build Frontend (React/Vite)
         run: |
           npm ci
+          npm test       # ⚠️ AJOUT de l'exécution des tests Vitest ici !
           npm run build
         working-directory: frontend/collector-app
 
