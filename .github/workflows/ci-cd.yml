@@ -46,7 +46,7 @@ jobs:
       - name: 📦 Build Frontend (React/Vite)
         run: |
           npm ci
-          npm test       # ⚠️ AJOUT de l'exécution des tests Vitest ici !
+          npx vitest run # ⚠️ Utilisation de npx vitest run pour éviter le blocage du CI
           npm run build
         working-directory: frontend/collector-app
 
