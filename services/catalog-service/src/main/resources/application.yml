@@ -1,10 +1,10 @@
 server:
   port: 8081
+
 spring:
   application:
     name: catalog-service
   datasource:
-    # Les variables ${...} seront injectées par Kubernetes (Phase 5)
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/${DB_NAME:catalog_db}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
@@ -22,3 +22,19 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+# Configuration Actuator & Metrics (Doit être à la racine, aligné tout à gauche !)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

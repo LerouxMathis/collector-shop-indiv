@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 5s # Prometheus viendra lire les métriques toutes les 5 secondes
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: 'collector-catalog-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      # host.docker.internal permet au conteneur Docker de taper sur le localhost de ton PC Windows/Mac
+      - targets: ['host.docker.internal:8081']

@@ -1,0 +1,149 @@
+---
+# ==========================================
+# 1. CATALOG SERVICE (Backend)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: collector-app # On le place avec la BDD et Keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+    spec:
+      containers:
+        - name: catalog-service
+          image: collector-catalog:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DB_HOST
+              value: "postgres" # Fonctionne car dans le même namespace
+            - name: DB_USER
+              value: "collector_db_user"
+            - name: DB_PASSWORD
+              value: "CatalogDbSecret2024!"
+            - name: KAFKA_BOOTSTRAP
+              # Adresse complète inter-namespace requise pour Kafka
+              value: "collector-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              value: "http://localhost:8080/auth/realms/collector-realm"
+            # 2. Où Spring Boot doit aller télécharger les clés publiques dans le réseau interne K8s
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+              value: "http://keycloak-service:8080/auth/realms/collector-realm/protocol/openid-connect/certs"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: collector-app
+spec:
+  selector:
+    app: catalog-service
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+
+---
+# ==========================================
+# 2. NOTIFICATION SERVICE (Backend Asynchrone)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: collector-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: collector-notification:latest
+          imagePullPolicy: Never
+          env:
+            - name: KAFKA_BOOTSTRAP
+              value: "collector-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+
+---
+# ==========================================
+# 3. COLLECTOR FRONTEND (React + Nginx)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collector-front
+  namespace: collector-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector-front
+  template:
+    metadata:
+      labels:
+        app: collector-front
+    spec:
+      containers:
+        - name: collector-front
+          image: collector-front:v2
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector-front
+  namespace: collector-app
+spec:
+  selector:
+    app: collector-front
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+---
+# ==========================================
+# 4. EXPOSITION PUBLIQUE (NGINX INGRESS)
+# ==========================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: collector-ingress
+  namespace: collector-app
+spec:
+  ingressClassName: nginx # Spécifique pour ton cluster Nginx
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: collector-front
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog-service
+                port:
+                  number: 8081

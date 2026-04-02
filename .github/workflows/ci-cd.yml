@@ -7,52 +7,48 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # ==========================================
   # 1. BUILD ET TESTS (Backend & Frontend)
-  # ==========================================
   build-and-test:
     name: Build & Test (Java & React)
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout du code
+      - name: Checkout du code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Requis pour l'analyse SonarQube
+          fetch-depth: 0
 
-      - name: ☕ Setup Java 17
+      - name: Setup Java 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
 
-      - name: 🛠️ Build Catalog Service (Maven)
-        # ⚠️ On a retiré -DskipTests ici pour que JUnit s'exécute !
+      - name: Build Catalog Service
         run: mvn clean package 
         working-directory: services/catalog-service
 
-      - name: 🛠️ Build Notification Service (Maven)
-        # ⚠️ On a retiré -DskipTests ici !
+      - name: Build Notification Service
         run: mvn clean package 
         working-directory: services/notification-service
 
-      - name: 🟢 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/collector-app/package-lock.json
 
-      - name: 📦 Build Frontend (React/Vite)
+      - name: Build Frontend
         run: |
           npm ci
-          npx vitest run # ⚠️ Utilisation de npx vitest run pour éviter le blocage du CI
+          npm audit --audit-level=high
+          npm run lint
+          npx vitest run
           npm run build
         working-directory: frontend/collector-app
 
-# ==========================================
-  # 2. ANALYSE STATIQUE DE SÉCURITÉ (SAST)
-  # ==========================================
+  # 2. ANALYSE DE SÉCURITÉ
   sonar-analysis:
     name: SonarQube Code Quality
     needs: build-and-test
@@ -60,18 +56,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Requis pour que Sonar puisse analyser l'historique de la branche main
+          fetch-depth: 0
           
-      - name: ☕ Setup Java 17
+      - name: Setup Java 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 🔍 SonarCloud Scan (Catalog Service)
+      - name: SonarCloud Scan (Catalog Service)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Laisse ceci tel quel, GitHub le gère
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Ton secret que tu as bien configuré
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} 
         run: |
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=LerouxMathis_collector-shop-indiv \
@@ -81,9 +77,7 @@ jobs:
         working-directory: services/catalog-service
         continue-on-error: true
 
-# ==========================================
   # 3. BUILD DOCKER ET REGISTRY
-  # ==========================================
   docker-build:
     name: Build Docker Images
     needs: build-and-test
@@ -91,32 +85,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: ☕ Setup Java 17
+      - name: Setup Java 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
 
-      - name: 🛠️ Génération du .jar (Catalog)
-        run: mvn clean package -DskipTests
+      - name: Build Docker Image (Catalog)
+        run: |
+          mvn clean package -DskipTests
+          docker build -t collector-catalog:latest -f Dockerfile .
         working-directory: services/catalog-service
 
-      - name: 🐳 Build Docker Image (Catalog)
-        run: docker build -t collector-catalog:latest -f Dockerfile .
-        working-directory: services/catalog-service
-
-      - name: 🛠️ Génération du .jar (Notification)
-        run: mvn clean package -DskipTests
+      - name: Build Docker Image (Notification)
+        run: |
+          mvn clean package -DskipTests
+          docker build -t collector-notification:latest -f Dockerfile .
         working-directory: services/notification-service
 
-      - name: 🐳 Build Docker Image (Notification)
-        run: docker build -t collector-notification:latest -f Dockerfile .
-        working-directory: services/notification-service
-
-# ==========================================
   # 4. ANALYSE DYNAMIQUE DE SÉCURITÉ (DAST)
-  # ==========================================
+
   dast-zap-scan:
     name: OWASP ZAP Security Scan
     needs: docker-build
@@ -124,19 +113,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # 1. On donne les droits d'écriture pour que le conteneur ZAP puisse générer ses rapports
-      - name: 🔓 Fix Permissions for ZAP
+      - name: Permissions ZAP
         run: chmod -R 777 $GITHUB_WORKSPACE
       
-      - name: 🚀 Lancement de l'infrastructure de test (DB + IAM + KAFKA)
+      - name: Lancement de l'infrastructure de test (DB + IAM + KAFKA)
         run: |
-          # 1. Démarrage de PostgreSQL
           docker run -d --name db-test --network="host" -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
-          
-          # 2. Démarrage de Keycloak
           docker run -d --name keycloak-test --network="host" -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:24.0.1 start-dev
-          
-          # 3. Démarrage de Kafka (KRaft mode, sans Zookeeper, ultra rapide pour CI)
           docker run -d --name kafka-test --network="host" \
             -e KAFKA_NODE_ID=1 \
             -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP='CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT' \
@@ -147,54 +130,35 @@ jobs:
             -e KAFKA_CONTROLLER_LISTENER_NAMES='CONTROLLER' \
             confluentinc/cp-kafka:7.4.0
           
-          echo "⏳ Attente du démarrage de l'infrastructure (Keycloak prend le plus de temps)..."
           until curl -s -f http://localhost:8080/realms/master/.well-known/openid-configuration > /dev/null; do
             sleep 5
           done
-          echo "✅ Infrastructure UP (DB, IAM, KAFKA) !"
           
-          # 4. Build de l'API
-          cat <<EOF > Dockerfile
-          FROM eclipse-temurin:17-jdk-alpine
-          COPY target/*.jar app.jar
-          ENTRYPOINT ["java","-jar","/app.jar"]
-          EOF
+          cd services/catalog-service
           mvn clean package -DskipTests
           docker build -t catalog-test .
+          docker run -d --name api-test --network="host" -e DB_HOST=localhost -e DB_USER=postgres -e DB_PASSWORD=postgres -e KAFKA_BOOTSTRAP=localhost:9092 -e SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/master catalog-test
           
-          # 5. Lancement de l'API (on retire l'exclusion Kafka, il va se connecter sur le localhost:9092 fourni par le conteneur ci-dessus)
-          docker run -d --name api-test --network="host" \
-            -e DB_HOST=localhost \
-            -e DB_USER=postgres \
-            -e DB_PASSWORD=postgres \
-            -e KAFKA_BOOTSTRAP=localhost:9092 \
-            -e SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/master \
-            catalog-test
-            
-          echo "⏳ Attente du démarrage de Spring Boot..."
-          TIMEOUT=0
-          until curl -s http://localhost:8081/api/articles > /dev/null; do
-            sleep 5
-            TIMEOUT=$((TIMEOUT+5))
-            if [ "$TIMEOUT" -ge 60 ]; then
-              echo "❌ ERREUR: Spring Boot n'a pas démarré après 60s."
-              docker logs api-test
-              exit 1
+          echo "Healthcheck API..."
+          for i in {1..20}; do
+            if curl -s http://localhost:8081/api/articles > /dev/null; then
+              echo "Serveur opérationnel"
+              break
             fi
+            sleep 3
           done
-          echo "✅ L'API est UP ! ZAP peut lancer son scan."
-        working-directory: services/catalog-service
+        working-directory: .
 
-      - name: 🕷️ OWASP ZAP Baseline Scan
+      - name: OWASP ZAP Scan
         uses: zaproxy/action-baseline@v0.15.0
         with:
           target: 'http://localhost:8081/api/articles'
           fail_action: false
           allow_issue_writing: false
-          artifact_name: 'zap-security-report' # Nom propre forcé ici
+          artifact_name: 'zap-security-report'
         continue-on-error: true
 
-      - name: 📁 Upload ZAP Report
+      - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
         with:
           name: ZAP-Security-Report
