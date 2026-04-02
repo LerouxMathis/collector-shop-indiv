@@ -1,5 +1,5 @@
 ---
-# 1. CATALOG SERVICE (Backend)
+# 1. CATALOG SERVICE (Backend Spring Boot)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,25 +15,31 @@ spec:
       labels:
         app: catalog-service
     spec:
+      automountServiceAccountToken: false  
       containers:
         - name: catalog-service
           image: collector-catalog:latest
           imagePullPolicy: Never
+          resources:                       
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "768Mi"              
+              cpu: "500m"
           ports:
             - containerPort: 8081
           env:
             - name: DB_HOST
-              value: "postgres" # Fonctionne car dans le même namespace
+              value: "postgres"
             - name: DB_USER
               value: "collector_db_user"
             - name: DB_PASSWORD
-              value: "CatalogDbSecret2024!"
+              value: "CatalogDbSecret2024!" 
             - name: KAFKA_BOOTSTRAP
-              # Adresse complète inter-namespace requise pour Kafka
               value: "collector-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
               value: "http://localhost:8080/auth/realms/collector-realm"
-            # 2. Où Spring Boot doit aller télécharger les clés publiques dans le réseau interne K8s
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
               value: "http://keycloak-service:8080/auth/realms/collector-realm/protocol/openid-connect/certs"
 ---
@@ -51,9 +57,7 @@ spec:
       targetPort: 8081
 
 ---
-# ==========================================
-# 2. NOTIFICATION SERVICE (Backend Asynchrone)
-# ==========================================
+# 2. NOTIFICATION SERVICE
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -69,18 +73,24 @@ spec:
       labels:
         app: notification-service
     spec:
+      automountServiceAccountToken: false  
       containers:
         - name: notification-service
           image: collector-notification:latest
           imagePullPolicy: Never
+          resources:                       
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
           env:
             - name: KAFKA_BOOTSTRAP
               value: "collector-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
 
 ---
-# ==========================================
-# 3. COLLECTOR FRONTEND (React + Nginx)
-# ==========================================
+# 3. COLLECTOR FRONTEND (Nginx/React)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -96,37 +106,29 @@ spec:
       labels:
         app: collector-front
     spec:
+      automountServiceAccountToken: false  
       containers:
         - name: collector-front
           image: collector-front:v2
           imagePullPolicy: Never
+          resources:                      
+            requests:
+              memory: "64Mi"              
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
           ports:
             - containerPort: 80
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: collector-front
-  namespace: collector-app
-spec:
-  selector:
-    app: collector-front
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 80
-
----
-# ==========================================
-# 4. EXPOSITION PUBLIQUE (NGINX INGRESS)
-# ==========================================
+# 4. EXPOSITION PUBLIQUE 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: collector-ingress
   namespace: collector-app
 spec:
-  ingressClassName: nginx # Spécifique pour ton cluster Nginx
+  ingressClassName: nginx 
   rules:
     - host: localhost
       http:
