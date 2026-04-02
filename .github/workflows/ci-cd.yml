@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -33,7 +33,7 @@ jobs:
         working-directory: services/notification-service
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -59,7 +59,7 @@ jobs:
           fetch-depth: 0
           
       - name: Setup Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -86,7 +86,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -154,7 +154,6 @@ jobs:
         with:
           target: 'http://localhost:8081/api/articles'
           fail_action: false
-          allow_issue_writing: false
           artifact_name: 'zap-security-report'
         continue-on-error: true
 
