@@ -42,7 +42,6 @@ spec:
                   key: admin-password
             - name: KC_HTTP_RELATIVE_PATH
               value: "/auth"
-            # Variable cruciale pour le fonctionnement derrière Traefik
             - name: KC_PROXY
               value: "edge"
             - name: KC_HOSTNAME_STRICT

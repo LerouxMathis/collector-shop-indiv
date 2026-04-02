@@ -7,11 +7,9 @@ const Catalog = () => {
   const [articles, setArticles] = useState([]);
 
   useEffect(() => {
-    // 1. Déclaration du contrôleur d'annulation
     const controller = new AbortController();
     let isMounted = true;
 
-    // 2. Encapsulation de la logique DANS l'effet (C'est ce qui corrige ton erreur !)
     const fetchArticles = async () => {
       try {
         const response = await api.get('/articles', { 
@@ -27,16 +25,12 @@ const Catalog = () => {
         }
       }
     };
-
-    // Appel immédiat
     fetchArticles();
-
-    // 3. Fonction de nettoyage
     return () => {
       isMounted = false;
       controller.abort();
     };
-  }, []); // Dépendances vides : exécution unique au montage
+  }, []); 
 
   const handleArticleAdded = (newArticle) => {
     setArticles([...articles, newArticle]);
@@ -59,9 +53,7 @@ const Catalog = () => {
             <div key={art.id} className="article-card">
               <h4 className="article-title">{art.title}</h4>
               <div className="article-price-tag">
-                {/* Petite sécurité : on s'assure que price est un nombre avant de faire toFixed */}
                 <span className="article-price">{Number(art.price || 0).toFixed(2)} €</span>
-                {/* Autre sécurité : on s'assure que ownerId existe avant de faire substring */}
                 <span className="article-vendeur">
                   Vendeur: {art.ownerId ? art.ownerId.substring(0,8) : 'Inconnu'}...
                 </span>
@@ -70,8 +62,7 @@ const Catalog = () => {
           ))}
         </div>
       )}
-      
-      {/* Intégration du formulaire de création */}
+
       <AddArticle onArticleAdded={handleArticleAdded} />
     </div>
   );

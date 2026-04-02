@@ -1,4 +1,5 @@
 package com.collector.catalog.controller;
+import com.collector.catalog.dto.ArticleRequest;
 import com.collector.catalog.model.Article;
 import com.collector.catalog.repository.ArticleRepository;
 import com.collector.catalog.service.KafkaProducerService;
@@ -24,12 +25,12 @@ public class ArticleController {
     }
 
     @PostMapping
-    public Article createArticle(@RequestBody Article article, @AuthenticationPrincipal Jwt jwt) {
-        // Sécurité : On associe l'article à l'utilisateur authentifié (Zero Trust)
+    public Article createArticle(@RequestBody ArticleRequest dto, @AuthenticationPrincipal Jwt jwt) {
+        Article article = new Article();
+        article.setTitle(dto.title());
+        article.setPrice(dto.price());
         article.setOwnerId(jwt.getSubject()); 
         Article saved = repository.save(article);
-        
-        // Performance : Envoi asynchrone pour ne pas bloquer le thread HTTP
         kafkaService.sendArticleCreatedEvent(saved.getId(), saved.getTitle());
         return saved;
     }

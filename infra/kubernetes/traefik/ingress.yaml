@@ -7,7 +7,7 @@ metadata:
     kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-    - http: # On a supprimé la ligne "- host: collector.local"
+    - http: 
         paths:
           - path: /auth
             pathType: Prefix

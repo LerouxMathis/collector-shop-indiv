@@ -1,6 +1,5 @@
-/* Définition des variables de couleur (Thème Vert Épuré) */
 :root {
-  --primary-color: #2e7d32; /* Vert "Forêt" professionnel */
+  --primary-color: #2e7d32; 
   --primary-dark: #1b5e20;
   --primary-light: #a5d6a7;
   --accent-color: #81c784;

@@ -18,7 +18,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ArticleController.class)
-// On désactive les filtres de sécurité Keycloak pour isoler purement la logique métier du contrôleur
 @AutoConfigureMockMvc(addFilters = false) 
 public class ArticleControllerTest {
 

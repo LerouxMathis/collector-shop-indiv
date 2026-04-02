@@ -64,18 +64,19 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: SonarCloud Scan (Catalog Service)
+      - name: SonarCloud Scan (Multi-language)
+        uses: SonarSource/sonarcloud-github-action@v3
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} 
-        run: |
-          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-          -Dsonar.projectKey=LerouxMathis_collector-shop-indiv \
-          -Dsonar.organization=lerouxmathis \
-          -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.branch.name=main
-        working-directory: services/catalog-service
-        continue-on-error: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=LerouxMathis_collector-shop-indiv
+            -Dsonar.organization=lerouxmathis
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,**/*.spec.ts,**/*.test.js
+            -Dsonar.java.binaries=**/target/classes
+            -Dsonar.javascript.lcov.reportPaths=frontend/collector-app/coverage/lcov.info
 
   # 3. BUILD DOCKER ET REGISTRY
   docker-build:

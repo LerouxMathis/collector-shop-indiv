@@ -9,7 +9,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     extra_hosts:
-      - "host.docker.internal:host-gateway" # Essentiel pour Windows/Linux
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   grafana:

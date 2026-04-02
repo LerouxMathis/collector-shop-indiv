@@ -8,9 +8,8 @@ public class Article {
     private Long id;
     private String title;
     private Double price;
-    private String ownerId; // Stocke le sub (ID Keycloak) de l'utilisateur
+    private String ownerId;
 
-    // Getters et Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTitle() { return title; }

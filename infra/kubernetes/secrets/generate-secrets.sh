@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🔒 Génération des Secrets Kubernetes (Non versionnés)..."
+echo "Génération des Secrets Kubernetes (Non versionnés)..."
 
 # Création du namespace commun pour l'application s'il n'existe pas
 kubectl create namespace collector-app --dry-run=client -o yaml | kubectl apply -f -

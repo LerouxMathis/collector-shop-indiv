@@ -23,7 +23,7 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
-# Configuration Actuator & Metrics (Doit être à la racine, aligné tout à gauche !)
+
 management:
   endpoints:
     web:

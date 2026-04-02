@@ -1,12 +1,10 @@
 ---
-# ==========================================
 # 1. CATALOG SERVICE (Backend)
-# ==========================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: catalog-service
-  namespace: collector-app # On le place avec la BDD et Keycloak
+  namespace: collector-app
 spec:
   replicas: 1
   selector:

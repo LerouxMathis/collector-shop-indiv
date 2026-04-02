@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import keycloak from './config/keycloak';
 import Catalog from './components/Catalog';
 import Header from './Header';
-import './App.css'; // Import des styles globaux
+import './App.css';
 
 function App() {
   const [keycloakInitialized, setKeycloakInitialized] = useState(false);
@@ -13,8 +13,6 @@ function App() {
       .then((auth) => {
         setAuthenticated(auth);
         setKeycloakInitialized(true);
-        
-        // Mécanisme de rafraîchissement du token (Sécurité Proactive)
         keycloak.onTokenExpired = () => {
           keycloak.updateToken(30).catch(() => {
             keycloak.logout();
