@@ -87,9 +87,10 @@ jobs:
             -Dsonar.organization=lerouxmathis
             -Dsonar.sources=.
             -Dsonar.java.binaries=**/target/classes
-            -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,**/*.spec.ts,**/*.test.js
+            -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,frontend/collector-app/coverage/**,**/*.test.jsx,**/*.spec.js
             -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
             -Dsonar.javascript.lcov.reportPaths=frontend/collector-app/coverage/lcov.info
+            -Dsonar.coverage.exclusions=src/test/**,**/*.test.jsx,**/*.spec.js,frontend/collector-app/coverage/**,**/dto/**,**/model/**
 
   # 3. BUILD DOCKER
   docker-build:
