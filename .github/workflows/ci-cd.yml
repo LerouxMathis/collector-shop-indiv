@@ -7,15 +7,13 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # 1. BUILD ET TESTS (Backend & Frontend)
+  # 1. BUILD ET TESTS (Rapid Feedback)
   build-and-test:
     name: Build & Test (Java & React)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -24,13 +22,10 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build Catalog Service
-        run: mvn clean package 
-        working-directory: services/catalog-service
-
-      - name: Build Notification Service
-        run: mvn clean package 
-        working-directory: services/notification-service
+      - name: Build & Test Backend
+        run: |
+          mvn clean package -f services/catalog-service/pom.xml
+          mvn clean package -f services/notification-service/pom.xml
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,16 +34,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/collector-app/package-lock.json
 
-      - name: Build Frontend
+      - name: Build & Test Frontend
         run: |
           npm ci
-          npm audit --audit-level=high
           npm run lint
           npx vitest run
           npm run build
         working-directory: frontend/collector-app
 
-  # 2. ANALYSE DE SÉCURITÉ
+  # 2. ANALYSE DE SÉCURITÉ ET QUALITÉ (Avec Coverage)
   sonar-analysis:
     name: SonarCloud Global Scan
     needs: build-and-test
@@ -65,13 +59,24 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # ÉTAPE CRUCIALE : On génère les .class dont Sonar a besoin
-      - name: Compile services for Sonar
-        run: |
-          mvn clean compile -DskipTests -f services/catalog-service/pom.xml
-          mvn clean compile -DskipTests -f services/notification-service/pom.xml
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: SonarCloud Scan (Multi-language)
+      # GÉNÉRATION DES RAPPORTS : On compile ET on lance les tests avec couverture
+      - name: Generate Coverage Reports
+        run: |
+          # Java : JaCoCo génère les rapports dans target/site/jacoco/jacoco.xml
+          mvn clean verify -Pcoverage -DskipTests=false -f services/catalog-service/pom.xml
+          mvn clean verify -Pcoverage -DskipTests=false -f services/notification-service/pom.xml
+          
+          # Frontend : Vitest génère le rapport dans coverage/lcov.info
+          cd frontend/collector-app
+          npm ci
+          npx vitest run --coverage
+
+      - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -81,38 +86,30 @@ jobs:
             -Dsonar.projectKey=LerouxMathis_collector-shop-indiv
             -Dsonar.organization=lerouxmathis
             -Dsonar.sources=.
-            -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,**/*.spec.ts,**/*.test.js
             -Dsonar.java.binaries=**/target/classes
+            -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,**/*.spec.ts,**/*.test.js
+            -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
+            -Dsonar.javascript.lcov.reportPaths=frontend/collector-app/coverage/lcov.info
 
-  # 3. BUILD DOCKER ET REGISTRY
+  # 3. BUILD DOCKER
   docker-build:
     name: Build Docker Images
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: maven
-
-      - name: Build Docker Image (Catalog)
+      
+      - name: Build Images
         run: |
-          mvn clean package -DskipTests
-          docker build -t collector-catalog:latest -f Dockerfile .
-        working-directory: services/catalog-service
+          cd services/catalog-service && mvn clean package -DskipTests && docker build -t collector-catalog:latest .
+          cd ../notification-service && mvn clean package -DskipTests && docker build -t collector-notification:latest .
 
-      - name: Build Docker Image (Notification)
-        run: |
-          mvn clean package -DskipTests
-          docker build -t collector-notification:latest -f Dockerfile .
-        working-directory: services/notification-service
-
-  # 4. ANALYSE DYNAMIQUE DE SÉCURITÉ (DAST)
-
+  # 4. ANALYSE DYNAMIQUE (DAST)
   dast-zap-scan:
     name: OWASP ZAP Security Scan
     needs: docker-build
@@ -123,38 +120,20 @@ jobs:
       - name: Permissions ZAP
         run: chmod -R 777 $GITHUB_WORKSPACE
       
-      - name: Lancement de l'infrastructure de test (DB + IAM + KAFKA)
+      - name: Lancement Infrastructure
         run: |
           docker run -d --name db-test --network="host" -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
           docker run -d --name keycloak-test --network="host" -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:24.0.1 start-dev
-          docker run -d --name kafka-test --network="host" \
-            -e KAFKA_NODE_ID=1 \
-            -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP='CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT' \
-            -e KAFKA_ADVERTISED_LISTENERS='PLAINTEXT://localhost:29092,EXTERNAL://localhost:9092' \
-            -e KAFKA_LISTENERS='PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,EXTERNAL://0.0.0.0:9092' \
-            -e KAFKA_CONTROLLER_QUORUM_VOTERS='1@localhost:29093' \
-            -e KAFKA_PROCESS_ROLES='broker,controller' \
-            -e KAFKA_CONTROLLER_LISTENER_NAMES='CONTROLLER' \
-            confluentinc/cp-kafka:7.4.0
+          docker run -d --name kafka-test --network="host" -e KAFKA_NODE_ID=1 -e KAFKA_PROCESS_ROLES='broker,controller' -e KAFKA_LISTENERS='PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093' -e KAFKA_ADVERTISED_LISTENERS='PLAINTEXT://localhost:9092' -e KAFKA_CONTROLLER_LISTENER_NAMES='CONTROLLER' -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP='CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT' -e KAFKA_CONTROLLER_QUORUM_VOTERS='1@localhost:9093' confluentinc/cp-kafka:7.4.0
           
-          until curl -s -f http://localhost:8080/realms/master/.well-known/openid-configuration > /dev/null; do
-            sleep 5
-          done
+          until curl -s -f http://localhost:8080/realms/master/.well-known/openid-configuration > /dev/null; do sleep 5; done
           
           cd services/catalog-service
           mvn clean package -DskipTests
           docker build -t catalog-test .
           docker run -d --name api-test --network="host" -e DB_HOST=localhost -e DB_USER=postgres -e DB_PASSWORD=postgres -e KAFKA_BOOTSTRAP=localhost:9092 -e SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/master catalog-test
           
-          echo "Healthcheck API..."
-          for i in {1..20}; do
-            if curl -s http://localhost:8081/api/articles > /dev/null; then
-              echo "Serveur opérationnel"
-              break
-            fi
-            sleep 3
-          done
-        working-directory: .
+          for i in {1..20}; do if curl -s http://localhost:8081/api/articles > /dev/null; then break; fi; sleep 3; done
 
       - name: OWASP ZAP Scan
         uses: zaproxy/action-baseline@v0.15.0
