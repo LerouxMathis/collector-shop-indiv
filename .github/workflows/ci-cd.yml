@@ -50,19 +50,26 @@ jobs:
 
   # 2. ANALYSE DE SÉCURITÉ
   sonar-analysis:
-    name: SonarQube Code Quality
+    name: SonarCloud Global Scan
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: maven
+
+      # ÉTAPE CRUCIALE : On génère les .class dont Sonar a besoin
+      - name: Compile services for Sonar
+        run: |
+          mvn clean compile -DskipTests -f services/catalog-service/pom.xml
+          mvn clean compile -DskipTests -f services/notification-service/pom.xml
 
       - name: SonarCloud Scan (Multi-language)
         uses: SonarSource/sonarcloud-github-action@v3
@@ -76,7 +83,6 @@ jobs:
             -Dsonar.sources=.
             -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,**/*.spec.ts,**/*.test.js
             -Dsonar.java.binaries=**/target/classes
-            -Dsonar.javascript.lcov.reportPaths=frontend/collector-app/coverage/lcov.info
 
   # 3. BUILD DOCKER ET REGISTRY
   docker-build:
