@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # 1. BUILD ET TESTS (Rapid Feedback)
+  # 1. BUILD ET TESTS
   build-and-test:
     name: Build & Test (Java & React)
     runs-on: ubuntu-latest
@@ -35,6 +35,8 @@ jobs:
           cache-dependency-path: frontend/collector-app/package-lock.json
 
       - name: Build & Test Frontend
+        env:
+          DOTENV_KEY: ${{ secrets.DOTENV_KEY }} 
         run: |
           npm ci
           npm run lint
@@ -42,7 +44,7 @@ jobs:
           npm run build
         working-directory: frontend/collector-app
 
-  # 2. ANALYSE DE SÉCURITÉ ET QUALITÉ (Avec Coverage)
+  # 2. ANALYSE DE SÉCURITÉ ET QUALITÉ
   sonar-analysis:
     name: SonarCloud Global Scan
     needs: build-and-test
@@ -64,17 +66,13 @@ jobs:
         with:
           node-version: '20'
 
-      # GÉNÉRATION DES RAPPORTS : On compile ET on lance les tests avec couverture
       - name: Generate Coverage Reports
+        env:
+          DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
         run: |
-          # Java : JaCoCo génère les rapports dans target/site/jacoco/jacoco.xml
           mvn clean verify -Pcoverage -DskipTests=false -f services/catalog-service/pom.xml
           mvn clean verify -Pcoverage -DskipTests=false -f services/notification-service/pom.xml
-          
-          # Frontend : Vitest génère le rapport dans coverage/lcov.info
-          cd frontend/collector-app
-          npm ci
-          npx vitest run --coverage
+          cd frontend/collector-app && npm ci && npx vitest run --coverage
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
@@ -121,18 +119,22 @@ jobs:
       - name: Permissions ZAP
         run: chmod -R 777 $GITHUB_WORKSPACE
       
-      - name: Lancement Infrastructure
+      - name: Lancement Infrastructure de Test
+        env:
+          DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
         run: |
+          # On utilise des variables neutres pour l'infrastructure temporaire
           docker run -d --name db-test --network="host" -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
           docker run -d --name keycloak-test --network="host" -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:24.0.1 start-dev
           docker run -d --name kafka-test --network="host" -e KAFKA_NODE_ID=1 -e KAFKA_PROCESS_ROLES='broker,controller' -e KAFKA_LISTENERS='PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093' -e KAFKA_ADVERTISED_LISTENERS='PLAINTEXT://localhost:9092' -e KAFKA_CONTROLLER_LISTENER_NAMES='CONTROLLER' -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP='CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT' -e KAFKA_CONTROLLER_QUORUM_VOTERS='1@localhost:9093' confluentinc/cp-kafka:7.4.0
           
           until curl -s -f http://localhost:8080/realms/master/.well-known/openid-configuration > /dev/null; do sleep 5; done
           
-          cd services/catalog-service
-          mvn clean package -DskipTests
-          docker build -t catalog-test .
-          docker run -d --name api-test --network="host" -e DB_HOST=localhost -e DB_USER=postgres -e DB_PASSWORD=postgres -e KAFKA_BOOTSTRAP=localhost:9092 -e SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8080/realms/master catalog-test
+          # L'API démarre et utilisera la DOTENV_KEY pour charger ses secrets réels
+          docker run -d --name api-test --network="host" \
+            -e DOTENV_KEY=${{ secrets.DOTENV_KEY }} \
+            -e DB_HOST=localhost \
+            catalog-test
           
           for i in {1..20}; do if curl -s http://localhost:8081/api/articles > /dev/null; then break; fi; sleep 3; done
 

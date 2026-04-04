@@ -46,4 +46,9 @@ yarn-error.log*
 *secret*.json
 .env
 .env.*
+.env.me
 !.env.example
+.env*
+.flaskenv*
+!.env.project
+!.env.vault
