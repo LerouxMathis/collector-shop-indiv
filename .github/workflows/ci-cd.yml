@@ -184,8 +184,7 @@ jobs:
           docker build -t collector-catalog:${{ github.sha }} .
 
       - name: Run Trivy scan
-        # On utilise une version STABLE (SHA) pour éviter les bugs du 'master'
-        uses: aquasecurity/trivy-action@18f251aedb402868da3f6f1c4a0344d2d4809e6c 
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'collector-catalog:${{ github.sha }}'
           format: 'table' # On reste sur le format table, fiable et lisible
