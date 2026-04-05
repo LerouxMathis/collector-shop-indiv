@@ -1,5 +1,6 @@
----
+# ==========================================================
 # 1. CATALOG SERVICE (Backend Spring Boot)
+# ==========================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,11 +34,18 @@ spec:
             - name: DB_HOST
               value: "postgres"
             - name: DB_USER
-              value: "collector_db_user"
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: db-user
             - name: DB_PASSWORD
-              value: "CatalogDbSecret2024!" 
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: db-password 
             - name: KAFKA_BOOTSTRAP
               value: "collector-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+            # Correction : Utilisation du service interne pour l'Issuer
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
               value: "http://localhost:8080/auth/realms/collector-realm"
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
@@ -57,7 +65,9 @@ spec:
       targetPort: 8081
 
 ---
+# ==========================================================
 # 2. NOTIFICATION SERVICE
+# ==========================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -88,9 +98,24 @@ spec:
           env:
             - name: KAFKA_BOOTSTRAP
               value: "collector-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: collector-app
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - protocol: TCP
+      port: 8082 # Port standard pour notification si différent
+      targetPort: 8082
 
 ---
+# ==========================================================
 # 3. COLLECTOR FRONTEND (Nginx/React)
+# ==========================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -121,7 +146,23 @@ spec:
           ports:
             - containerPort: 80
 ---
-# 4. EXPOSITION PUBLIQUE 
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector-front
+  namespace: collector-app
+spec:
+  selector:
+    app: collector-front
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+---
+# ==========================================================
+# 4. EXPOSITION PUBLIQUE (Ingress Controller)
+# ==========================================================
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
