@@ -183,28 +183,13 @@ jobs:
           cd services/catalog-service && mvn clean package -DskipTests
           docker build -t collector-catalog:${{ github.sha }} .
 
-      - name: Run Trivy scan on Catalog Service
-        uses: aquasecurity/trivy-action@master
+      - name: Run Trivy scan
+        # On utilise une version STABLE (SHA) pour éviter les bugs du 'master'
+        uses: aquasecurity/trivy-action@18f251aedb402868da3f6f1c4a0344d2d4809e6c 
         with:
           image-ref: 'collector-catalog:${{ github.sha }}'
-          format: 'table' # Affiche un beau tableau dans les logs GitHub
-          exit-code: '1'  # Bloque la pipeline si des failles CRITICAL sont trouvées
-          trivy-version: '0.69.3'
+          format: 'table' # On reste sur le format table, fiable et lisible
+          exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
-
-      # Optionnel : Générer un rapport HTML
-      - name: Generate Trivy HTML Report
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'collector-catalog:${{ github.sha }}'
-          format: 'template'
-          template: '@/contrib/html.tpl'
-          output: 'trivy-report.html'
-
-      - name: Upload Trivy Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: Trivy-Security-Report
-          path: trivy-report.html
