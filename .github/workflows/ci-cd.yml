@@ -189,6 +189,7 @@ jobs:
           image-ref: 'collector-catalog:${{ github.sha }}'
           format: 'table' # Affiche un beau tableau dans les logs GitHub
           exit-code: '1'  # Bloque la pipeline si des failles CRITICAL sont trouvées
+          trivy-version: '0.69.3'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
