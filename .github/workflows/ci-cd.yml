@@ -83,14 +83,12 @@ jobs:
           args: >
             -Dsonar.projectKey=LerouxMathis_collector-shop-indiv
             -Dsonar.organization=lerouxmathis
-            -Dsonar.sources=services/catalog-service/src/main/java,services/notification-service/src/main/java,frontend/collector-app/src
-            -Dsonar.tests=services/catalog-service/src/test/java,services/notification-service/src/test/java,frontend/collector-app/src
-            -Dsonar.test.inclusions=**/*.test.jsx,**/*.test.js,**/*Test.java
-            -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,**/*.test.jsx,**/*.test.js,**/*Test.java
-            -Dsonar.coverage.exclusions=**/*.test.jsx,**/*.test.js,**/*Test.java,**/dto/**,**/model/**,**/config/**,**/*Application.java
+            -Dsonar.sources=.
             -Dsonar.java.binaries=**/target/classes
+            -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,frontend/collector-app/coverage/**,**/*.test.jsx,**/*.spec.js
             -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
             -Dsonar.javascript.lcov.reportPaths=frontend/collector-app/coverage/lcov.info
+            -Dsonar.coverage.exclusions=src/test/**,**/*.test.jsx,**/*.spec.js,frontend/collector-app/coverage/**,**/dto/**,**/model/**
 
   # 3. BUILD DOCKER 
   docker-build:
