@@ -98,6 +98,11 @@ spec:
           env:
             - name: KAFKA_BOOTSTRAP
               value: "collector-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+              # Configuration de l'envoi de mail vers Maildev
+            - name: SPRING_MAIL_HOST
+              value: "maildev-service"
+            - name: SPRING_MAIL_PORT
+              value: "1025"
 ---
 apiVersion: v1
 kind: Service
@@ -188,3 +193,52 @@ spec:
                 name: catalog-service
                 port:
                   number: 8081
+          - path: /mail
+            pathType: Prefix
+            backend:
+              service:
+                name: maildev-service
+                port:
+                  number: 1080
+
+---
+# ==========================================================
+# 5. MAILDEV (Serveur de mail de test)
+# ==========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maildev
+  namespace: collector-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maildev
+  template:
+    metadata:
+      labels:
+        app: maildev
+    spec:
+      containers:
+      - name: maildev
+        image: maildev/maildev:latest
+        ports:
+        - containerPort: 1025 # SMTP
+        - containerPort: 1080 # Web UI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maildev-service
+  namespace: collector-app
+spec:
+  selector:
+    app: maildev
+  ports:
+  - name: smtp
+    port: 1025
+    targetPort: 1025
+  - name: web
+    port: 1080
+    targetPort: 1080
