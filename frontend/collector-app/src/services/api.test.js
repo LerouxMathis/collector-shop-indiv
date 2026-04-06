@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import keycloak from '../../config/keycloak';
+import keycloak from '../config/keycloak';
 
 // 1. On mock Keycloak avant tout
-vi.mock('../../config/keycloak', () => ({
+vi.mock('../config/keycloak', () => ({
   default: {
     token: null
   }
@@ -17,7 +17,7 @@ describe('API Service (Axios Interceptor)', () => {
 
   it('doit ajouter le header Authorization si un token est présent', async () => {
     // Arrange
-    const api = (await import('../api')).default;
+    const api = (await import('./api')).default;
     keycloak.token = 'fake-jwt-token';
     const config = { headers: {} };
 
@@ -32,7 +32,7 @@ describe('API Service (Axios Interceptor)', () => {
 
   it('ne doit pas ajouter de header Authorization si le token est absent', async () => {
     // Arrange
-    const api = (await import('../api')).default;
+    const api = (await import('./api')).default;
     keycloak.token = null;
     const config = { headers: {} };
 
@@ -46,7 +46,7 @@ describe('API Service (Axios Interceptor)', () => {
 
   it('doit rejeter la promesse en cas d erreur d intercepteur', async () => {
     // Arrange
-    const api = (await import('../api')).default;
+    const api = (await import('./api')).default;
     const error = new Error('Axios Error');
 
     // Act
