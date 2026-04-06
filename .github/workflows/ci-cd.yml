@@ -7,9 +7,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # 1. BUILD ET TESTS
   build-and-test:
-    name: Build & Test (Java & React)
+    name: Build & Test 
     runs-on: ubuntu-latest
     steps:
       - name: Checkout du code
@@ -44,7 +43,6 @@ jobs:
           npm run build
         working-directory: frontend/collector-app
 
-  # 2. ANALYSE DE SÉCURITÉ ET QUALITÉ
   sonar-analysis:
     name: SonarCloud Global Scan
     needs: build-and-test
@@ -90,7 +88,6 @@ jobs:
             -Dsonar.javascript.lcov.reportPaths=frontend/collector-app/coverage/lcov.info
             -Dsonar.coverage.exclusions=src/test/**,**/*.test.jsx,**/*.spec.js,frontend/collector-app/coverage/**,**/dto/**,**/model/**
 
-  # 3. BUILD DOCKER 
   docker-build:
     name: Build Docker Images
     needs: build-and-test
@@ -108,7 +105,6 @@ jobs:
           cd services/catalog-service && mvn clean package -DskipTests && docker build -t collector-catalog:latest .
           cd ../notification-service && mvn clean package -DskipTests && docker build -t collector-notification:latest .
 
-  # 4. ANALYSE DYNAMIQUE 
   dast-zap-scan:
     name: OWASP ZAP Security Scan
     needs: docker-build
@@ -166,7 +162,6 @@ jobs:
           name: ZAP-Security-Report
           path: report_html.html
 
-  # 5. SCAN DES VULNÉRABILITÉS (Trivy)
   trivy-scan:
     name: Trivy Container Scan
     needs: docker-build

@@ -3,11 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import App from './App';
 import keycloak from './config/keycloak';
 
-// 1. On Mock les composants enfants pour isoler le test de App.jsx
 vi.mock('./Header', () => ({ default: () => <div data-testid="header-mock">Header</div> }));
 vi.mock('./components/Catalog', () => ({ default: () => <div data-testid="catalog-mock">Catalog</div> }));
-
-// 2. On Mock la configuration Keycloak
 vi.mock('./config/keycloak', () => ({
   default: {
     init: vi.fn(),
@@ -23,7 +20,6 @@ describe('App Component (Security Root)', () => {
   });
 
   it('doit afficher l écran de chargement au démarrage', () => {
-    // On simule une promesse qui ne se résout pas immédiatement
     keycloak.init.mockReturnValue(new Promise(() => {})); 
     
     render(<App />);
@@ -32,12 +28,10 @@ describe('App Component (Security Root)', () => {
   });
 
   it('doit afficher le Header et le Catalog après une authentification réussie', async () => {
-    // On simule un succès d'auth
     keycloak.init.mockResolvedValue(true);
 
     render(<App />);
 
-    // On attend que l'état interne React change
     await waitFor(() => {
       expect(screen.getByTestId('header-mock')).toBeInTheDocument();
       expect(screen.getByTestId('catalog-mock')).toBeInTheDocument();
@@ -45,7 +39,6 @@ describe('App Component (Security Root)', () => {
   });
 
   it('doit afficher un message d erreur si l authentification échoue', async () => {
-    // On simule une initialisation réussie mais un utilisateur non-authentifié
     keycloak.init.mockResolvedValue(false);
 
     render(<App />);

@@ -17,7 +17,6 @@ public class EmailService {
     }
 
     public void sendNotification(String to, String articleName) {
-        log.info("📧 Tentative d'envoi d'email pour l'article : {} vers {}", articleName, to);
         
         try {
             SimpleMailMessage message = new SimpleMailMessage();
@@ -27,10 +26,9 @@ public class EmailService {
             message.setText("L'article '" + articleName + "' vient d'être ajouté au catalogue.");
 
             mailSender.send(message);
-            log.info("✅ Email envoyé avec succès à Maildev !");
         } catch (Exception e) {
-            log.error("❌ ERREUR LORS DE L'ENVOI DE L'EMAIL : {}", e.getMessage());
-            log.error("Détails de l'erreur : ", e);
+            log.error("Bug lors de l'envoi de mail : {}", e.getMessage());
+            log.error("erreur : ", e);
         }
     }
 }

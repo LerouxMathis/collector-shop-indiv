@@ -3,7 +3,7 @@ kind: ServiceAccount
 metadata:
   name: keycloak-sa
   namespace: collector-app
-automountServiceAccountToken: false # On désactive le jeton au niveau du compte
+automountServiceAccountToken: false
 ---
 apiVersion: v1
 kind: Service
@@ -32,12 +32,11 @@ spec:
       labels:
         app: keycloak
     spec:
-      serviceAccountName: keycloak-sa # On utilise notre compte sécurisé
+      serviceAccountName: keycloak-sa 
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:24.0.1
           args: ["start-dev", "--import-realm"]
-          # Bloc Resources nettoyé pour Sonar
           resources:
             requests:
               cpu: "250m"

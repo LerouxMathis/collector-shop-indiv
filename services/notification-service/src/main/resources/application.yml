@@ -4,21 +4,17 @@ server:
 spring:
   application:
     name: notification-service
-  
-  # Configuration Kafka
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
     consumer:
       group-id: notification-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      # ON CHANGE ICI : On passe en JSON
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "com.collector.notification.dto"
         spring.json.value.default.type: "com.collector.notification.dto.ArticleDTO"
 
-  # Configuration Mail (Maildev)
   mail:
     host: maildev-service
     port: 1025
@@ -29,7 +25,6 @@ spring:
           starttls:
             enable: false
 
-# Debug logs pour voir l'envoi
 logging:
   level:
     org.springframework.mail: DEBUG

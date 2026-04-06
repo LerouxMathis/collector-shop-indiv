@@ -1,6 +1,3 @@
-# ==========================================================
-# 0. SÉCURITÉ : Service Account pour les Apps
-# ==========================================================
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -8,10 +5,7 @@ metadata:
   namespace: collector-app
 automountServiceAccountToken: false
 ---
-
-# ==========================================================
-# 1. CATALOG SERVICE (Backend Spring Boot)
-# ==========================================================
+# 1. SERVICE CATALOG
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,7 +21,7 @@ spec:
       labels:
         app: catalog-service
     spec:
-      serviceAccountName: collector-apps-sa # Sécurité RBAC
+      serviceAccountName: collector-apps-sa 
       containers:
         - name: catalog-service
           image: collector-catalog:latest
@@ -75,9 +69,7 @@ spec:
       targetPort: 8081
 
 ---
-# ==========================================================
-# 2. NOTIFICATION SERVICE
-# ==========================================================
+# 2. SERVICE NOTIFICATION
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -93,7 +85,7 @@ spec:
       labels:
         app: notification-service
     spec:
-      serviceAccountName: collector-apps-sa # Sécurité RBAC
+      serviceAccountName: collector-apps-sa 
       containers:
         - name: notification-service
           image: collector-notification:latest
@@ -127,9 +119,7 @@ spec:
       targetPort: 8082
 
 ---
-# ==========================================================
-# 3. COLLECTOR FRONTEND (Nginx/React)
-# ==========================================================
+# 3. FRONTEND (Nginx/React)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -145,7 +135,7 @@ spec:
       labels:
         app: collector-front
     spec:
-      serviceAccountName: collector-apps-sa # Sécurité RBAC
+      serviceAccountName: collector-apps-sa 
       containers:
         - name: collector-front
           image: collector-front:v2
@@ -174,10 +164,7 @@ spec:
       targetPort: 80
 
 ---
-# ==========================================================
-# 4. EXPOSITION PUBLIQUE (Ingress)
-# ==========================================================
-# ... (Ton Ingress reste identique, il n'a pas besoin de resources)
+# 4. Ingress
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -212,9 +199,7 @@ spec:
                   number: 1080
 
 ---
-# ==========================================================
 # 5. MAILDEV (Serveur de mail de test)
-# ==========================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -230,11 +215,10 @@ spec:
       labels:
         app: maildev
     spec:
-      serviceAccountName: collector-apps-sa # AJOUT : Sécurité RBAC
+      serviceAccountName: collector-apps-sa
       containers:
       - name: maildev
         image: maildev/maildev:latest
-        # AJOUT : Limites de ressources pour SonarCloud
         resources:
           requests:
             cpu: "50m"

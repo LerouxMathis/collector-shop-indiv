@@ -32,7 +32,6 @@ public class ArticleControllerTest {
 
     @Test
     public void testGetAllArticles_ShouldReturnList() throws Exception {
-        // 1. Préparation des données fictives (Mock)
         Article article1 = new Article();
         article1.setId(1L);
         article1.setTitle("Carte Dracaufeu");
@@ -41,7 +40,6 @@ public class ArticleControllerTest {
 
         Mockito.when(repository.findAll()).thenReturn(Arrays.asList(article1));
 
-        // 2. Exécution de la requête HTTP simulée et 3. Vérifications (Assertions)
         mockMvc.perform(get("/api/articles")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())

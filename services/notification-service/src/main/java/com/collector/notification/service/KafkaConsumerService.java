@@ -15,7 +15,6 @@ public class KafkaConsumerService {
 
     @KafkaListener(topics = "article-cree", groupId = "notification-group")
     public void consume(ArticleDTO article) {
-        System.out.println("🔔 Notification pour : " + article.getNom());
         emailService.sendNotification("client@test.com", article.getNom());
     }
 }

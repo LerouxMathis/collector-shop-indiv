@@ -3,7 +3,7 @@ kind: ServiceAccount
 metadata:
   name: postgres-sa
   namespace: collector-app
-automountServiceAccountToken: false # On verrouille au niveau du compte
+automountServiceAccountToken: false
 ---
 apiVersion: v1
 kind: Service
@@ -32,11 +32,10 @@ spec:
       labels:
         app: postgres
     spec:
-      serviceAccountName: postgres-sa # On lie le compte sécurisé
+      serviceAccountName: postgres-sa
       containers:
         - name: postgres
           image: postgres:15-alpine
-          # Bloc Resources réaligné pour l'analyse Sonar
           resources:
             requests:
               cpu: "100m"
