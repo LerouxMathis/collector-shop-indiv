@@ -181,7 +181,7 @@ jobs:
         - uses: actions/checkout@v4
         # ... build de l'image correspondante ...
         - name: Run Trivy on ${{ matrix.image }}
-          uses: aquasecurity/trivy-action@57a97c7 # Version safe v0.35.0
+          uses: aquasecurity/trivy-action@0.35.0 
           with:
             image-ref: '${{ matrix.image }}:${{ github.sha }}'
             exit-code: '1'
