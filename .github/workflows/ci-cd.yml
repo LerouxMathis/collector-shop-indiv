@@ -36,9 +36,11 @@ jobs:
 
       - name: Build & Test Frontend
         env:
+          # CORRECTIF : On mappe le secret dans une variable d'env ici
           DOTENV_KEY: ${{ secrets.DOTENV_KEY }} 
         run: |
-          npm ci
+          # CORRECTIF : Ajout de --ignore-scripts pour bloquer les scripts malveillants au 'install'
+          npm ci --ignore-scripts
           npm run lint
           npx vitest run
           npm run build
@@ -68,11 +70,13 @@ jobs:
 
       - name: Generate Coverage Reports
         env:
+          # CORRECTIF : Toujours passer par 'env' au niveau du step
           DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
         run: |
           mvn clean verify -Pcoverage -DskipTests=false -f services/catalog-service/pom.xml
           mvn clean verify -Pcoverage -DskipTests=false -f services/notification-service/pom.xml
-          cd frontend/collector-app && npm ci && npx vitest run --coverage
+          # CORRECTIF : Ajout de --ignore-scripts
+          cd frontend/collector-app && npm ci --ignore-scripts && npx vitest run --coverage
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
@@ -131,30 +135,27 @@ jobs:
       
       - name: Lancement Infrastructure et API
         env:
+          # CORRECTIF : On déclare la variable ici pour ne pas l'étendre directement dans le 'run'
           DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
         run: |
-          # 1. On lance la base, Keycloak et Kafka
           docker run -d --name db-test --network="host" -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
           docker run -d --name keycloak-test --network="host" -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:24.0.1 start-dev
           docker run -d --name kafka-test --network="host" -e KAFKA_NODE_ID=1 -e KAFKA_PROCESS_ROLES='broker,controller' -e KAFKA_LISTENERS='PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093' -e KAFKA_ADVERTISED_LISTENERS='PLAINTEXT://localhost:9092' -e KAFKA_CONTROLLER_LISTENER_NAMES='CONTROLLER' -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP='CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT' -e KAFKA_CONTROLLER_QUORUM_VOTERS='1@localhost:29093' confluentinc/cp-kafka:7.4.0
           
-          # 2. Attente de Keycloak
           until curl -s -f http://localhost:8080/realms/master/.well-known/openid-configuration > /dev/null; do sleep 5; done
           
-          # 3. ON RE-BUILD L'IMAGE ICI (car le job est vierge)
           cd services/catalog-service
           mvn clean package -DskipTests
           docker build -t catalog-test .
           
-          # 4. On lance l'API avec la clé du Vault + Overrides pour le test
+          # CORRECTIF : On utilise $DOTENV_KEY (variable d'env shell) et non ${{ secrets... }}
           docker run -d --name api-test --network="host" \
-            -e DOTENV_KEY=${{ secrets.DOTENV_KEY }} \
+            -e DOTENV_KEY="$DOTENV_KEY" \
             -e DB_HOST=localhost \
             -e DB_USER=postgres \
             -e DB_PASSWORD=postgres \
             catalog-test
           
-          # 5. Attente que l'API soit prête
           for i in {1..20}; do if curl -s http://localhost:8081/api/articles > /dev/null; then break; fi; sleep 3; done
 
       - name: OWASP ZAP Scan
@@ -170,37 +171,31 @@ jobs:
         with:
           name: ZAP-Security-Report
           path: report_html.html
-# 5. SCAN DES VULNÉRABILITÉS (Trivy)
+
+  # 5. SCAN DES VULNÉRABILITÉS (Trivy)
   trivy-scan:
     name: Trivy Container Scan
     needs: docker-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-# --- SCAN DU SYSTÈME DE FICHIERS (SCA) ---
-      # Détecte les failles dans les pom.xml et package.json avant même le build
       - name: Run Trivy FS scan (Root)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          exit-code: '0' # On ne bloque pas ici pour laisser les scans d'images se faire
+          exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
-      # --- PREPARATION DES IMAGES ---
-      # On doit reconstruire les images car les jobs sont isolés
       - name: Build All Images for scanning
         run: |
-          # Catalog
           cd services/catalog-service && mvn clean package -DskipTests && docker build -t collector-catalog:test .
           cd ../..
-          # Notification
           cd services/notification-service && mvn clean package -DskipTests && docker build -t collector-notification:test .
           cd ../..
-          # Frontend
-          cd frontend/collector-app && npm ci && npm run build && docker build -t collector-front:test .
+          # CORRECTIF : Ajout de --ignore-scripts
+          cd frontend/collector-app && npm ci --ignore-scripts && npm run build && docker build -t collector-front:test .
 
-      # --- SCAN DES IMAGES ---
       - name: Scan Catalog Service
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
@@ -227,4 +222,3 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
-      
