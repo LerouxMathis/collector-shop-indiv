@@ -39,8 +39,8 @@ describe('App Component (Security Root)', () => {
 
     // On attend que l'état interne React change
     await waitFor(() => {
-      expect(screen.getByTestid('header-mock')).toBeInTheDocument();
-      expect(screen.getByTestid('catalog-mock')).toBeInTheDocument();
+      expect(screen.getByTestId('header-mock')).toBeInTheDocument();
+      expect(screen.getByTestId('catalog-mock')).toBeInTheDocument();
     });
   });
 
