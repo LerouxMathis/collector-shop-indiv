@@ -36,10 +36,8 @@ jobs:
 
       - name: Build & Test Frontend
         env:
-          # CORRECTIF : On mappe le secret dans une variable d'env ici
           DOTENV_KEY: ${{ secrets.DOTENV_KEY }} 
         run: |
-          # CORRECTIF : Ajout de --ignore-scripts pour bloquer les scripts malveillants au 'install'
           npm ci --ignore-scripts
           npm run lint
           npx vitest run
@@ -70,12 +68,10 @@ jobs:
 
       - name: Generate Coverage Reports
         env:
-          # CORRECTIF : Toujours passer par 'env' au niveau du step
           DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
         run: |
           mvn clean verify -Pcoverage -DskipTests=false -f services/catalog-service/pom.xml
           mvn clean verify -Pcoverage -DskipTests=false -f services/notification-service/pom.xml
-          # CORRECTIF : Ajout de --ignore-scripts
           cd frontend/collector-app && npm ci --ignore-scripts && npx vitest run --coverage
 
       - name: SonarCloud Scan
@@ -135,7 +131,6 @@ jobs:
       
       - name: Lancement Infrastructure et API
         env:
-          # CORRECTIF : On déclare la variable ici pour ne pas l'étendre directement dans le 'run'
           DOTENV_KEY: ${{ secrets.DOTENV_KEY }}
         run: |
           docker run -d --name db-test --network="host" -e POSTGRES_DB=catalog_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:15-alpine
@@ -148,7 +143,6 @@ jobs:
           mvn clean package -DskipTests
           docker build -t catalog-test .
           
-          # CORRECTIF : On utilise $DOTENV_KEY (variable d'env shell) et non ${{ secrets... }}
           docker run -d --name api-test --network="host" \
             -e DOTENV_KEY="$DOTENV_KEY" \
             -e DB_HOST=localhost \
@@ -193,7 +187,6 @@ jobs:
           cd ../..
           cd services/notification-service && mvn clean package -DskipTests && docker build -t collector-notification:test .
           cd ../..
-          # CORRECTIF : Ajout de --ignore-scripts
           cd frontend/collector-app && npm ci --ignore-scripts && npm run build && docker build -t collector-front:test .
 
       - name: Scan Catalog Service
