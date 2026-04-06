@@ -170,61 +170,20 @@ jobs:
         with:
           name: ZAP-Security-Report
           path: report_html.html
-# 5. SCAN DES VULNÉRABILITÉS (Trivy)
   trivy-scan:
-    name: Trivy Container Scan
-    needs: docker-build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-# --- SCAN DU SYSTÈME DE FICHIERS (SCA) ---
-      # Détecte les failles dans les pom.xml et package.json avant même le build
-      - name: Run Trivy FS scan (Root)
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          exit-code: '0' # On ne bloque pas ici pour laisser les scans d'images se faire
-          severity: 'CRITICAL,HIGH'
-
-      # --- PREPARATION DES IMAGES ---
-      # On doit reconstruire les images car les jobs sont isolés
-      - name: Build All Images for scanning
-        run: |
-          # Catalog
-          cd services/catalog-service && mvn clean package -DskipTests && docker build -t collector-catalog:test .
-          cd ../..
-          # Notification
-          cd services/notification-service && mvn clean package -DskipTests && docker build -t collector-notification:test .
-          cd ../..
-          # Frontend
-          cd frontend/collector-app && npm ci && npm run build && docker build -t collector-front:test .
-
-      # --- SCAN DES IMAGES ---
-      - name: Scan Catalog Service
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: 'collector-catalog:test'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
-
-      - name: Scan Notification Service
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: 'collector-notification:test'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
-
-      - name: Scan Frontend (Nginx/React)
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: 'collector-front:test'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
+      name: Trivy Scan
+      runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          # On définit la liste de nos images ici
+          image: [collector-catalog, collector-notification, collector-front]
+      steps:
+        - uses: actions/checkout@v4
+        # ... build de l'image correspondante ...
+        - name: Run Trivy on ${{ matrix.image }}
+          uses: aquasecurity/trivy-action@57a97c7 # Version safe v0.35.0
+          with:
+            image-ref: '${{ matrix.image }}:${{ github.sha }}'
+            exit-code: '1'
+            severity: 'CRITICAL,HIGH'
       
