@@ -158,7 +158,7 @@ jobs:
           for i in {1..20}; do if curl -s http://localhost:8081/api/articles > /dev/null; then break; fi; sleep 3; done
 
       - name: OWASP ZAP Scan
-        uses: zaproxy/action-baseline@v0.15.0
+        uses: zaproxy/action-baseline@103554e
         with:
           target: 'http://localhost:8081/api/articles'
           fail_action: false
@@ -180,7 +180,7 @@ jobs:
 # --- SCAN DU SYSTÈME DE FICHIERS (SCA) ---
       # Détecte les failles dans les pom.xml et package.json avant même le build
       - name: Run Trivy FS scan (Root)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -202,7 +202,7 @@ jobs:
 
       # --- SCAN DES IMAGES ---
       - name: Scan Catalog Service
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7
         with:
           image-ref: 'collector-catalog:test'
           format: 'table'
@@ -211,7 +211,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Scan Notification Service
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7
         with:
           image-ref: 'collector-notification:test'
           format: 'table'
@@ -220,7 +220,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Scan Frontend (Nginx/React)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7
         with:
           image-ref: 'collector-front:test'
           format: 'table'
