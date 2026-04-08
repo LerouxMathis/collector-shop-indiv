@@ -86,7 +86,18 @@ jobs:
             -Dsonar.exclusions=**/node_modules/**,**/target/**,**/dist/**,frontend/collector-app/coverage/**,**/*.test.jsx,**/*.spec.js
             -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
             -Dsonar.javascript.lcov.reportPaths=frontend/collector-app/coverage/lcov.info
-            -Dsonar.coverage.exclusions=src/test/**,**/*.test.jsx,**/*.spec.js,frontend/collector-app/coverage/**,**/dto/**,**/model/**,**/src/test/java/**/*Test.java
+            -Dsonar.coverage.exclusions=\
+              **/src/test/**,\
+              **/src/main/resources/**,\
+              **/*.test.jsx,\
+              **/*.test.js,\
+              **/*.spec.js,\
+              **/main.jsx,\
+              **/config/**,\
+              **/*Application.java,\
+              **/dto/**,\
+              **/model/**,\
+              frontend/collector-app/coverage/**
 
   docker-build:
     name: Build Docker Images
