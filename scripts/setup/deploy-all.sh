@@ -5,7 +5,7 @@ eval $(minikube docker-env)
 
 docker build -t collector-catalog:latest ./services/catalog-service
 docker build -t collector-notification:latest ./services/notification-service
-docker build -t collector-front:v2 ./frontend/collector-app
+docker build -t collector-front:latest ./frontend/collector-app
 
 ./infra/kubernetes/secrets/generate-secrets.sh
 

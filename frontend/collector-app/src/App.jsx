@@ -9,7 +9,7 @@ function App() {
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    keycloak.init({ onLoad: 'login-required', checkLoginIframe: false })
+    keycloak.init({ onLoad: 'check-sso', checkLoginIframe: false })
       .then((auth) => {
         setAuthenticated(auth);
         setKeycloakInitialized(true);
@@ -25,18 +25,14 @@ function App() {
   }, []);
 
   if (!keycloakInitialized) {
-    return <div style={styles.loading}>Connexion sécurisée en cours...</div>;
+    return <div style={styles.loading}>Chargement de Collector.shop...</div>;
   }
 
-  if (!authenticated) {
-    return <div style={styles.error}>Échec de l'authentification.</div>;
-  }
-
-  return (
+    return (
     <div>
-      <Header />
+      <Header authenticated={authenticated} />
       <main className="main-container">
-        <Catalog />
+        <Catalog authenticated={authenticated} />
       </main>
     </div>
   );

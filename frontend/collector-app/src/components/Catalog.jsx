@@ -3,7 +3,8 @@ import api from '../services/api';
 import AddArticle from './AddArticle';
 import './Catalog.css';
 
-const Catalog = () => {
+
+const Catalog = ({ authenticated }) => {
   const [articles, setArticles] = useState([]);
 
   useEffect(() => {
@@ -43,9 +44,15 @@ const Catalog = () => {
         <p className="catalog-subtitle">Les dernières trouvailles de la communauté Collector.</p>
       </div>
 
+      {authenticated && (
+        <div className="add-article-section" style={{ marginBottom: '40px' }}>
+          <AddArticle onArticleAdded={handleArticleAdded} />
+        </div>
+      )}
+
       {articles.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-          Aucun article pour le moment. Soyez le premier à vendre !
+          Aucun article pour le moment. {authenticated ? "Soyez le premier à en ajouter !" : "Connectez-vous pour être le premier vendeur !"}
         </div>
       ) : (
         <div className="article-grid">
@@ -55,15 +62,13 @@ const Catalog = () => {
               <div className="article-price-tag">
                 <span className="article-price">{Number(art.price || 0).toFixed(2)} €</span>
                 <span className="article-vendeur">
-                  Vendeur: {art.ownerId ? art.ownerId.substring(0,8) : 'Inconnu'}...
+                  Vendeur: {art.ownerId ? art.ownerId.substring(0,8) : 'Anonyme'}...
                 </span>
               </div>
             </div>
           ))}
         </div>
       )}
-
-      <AddArticle onArticleAdded={handleArticleAdded} />
     </div>
   );
 };

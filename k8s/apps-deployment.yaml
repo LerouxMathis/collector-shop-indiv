@@ -138,7 +138,7 @@ spec:
       serviceAccountName: collector-apps-sa 
       containers:
         - name: collector-front
-          image: collector-front:v2
+          image: collector-front:latest
           imagePullPolicy: Never
           resources:
             requests:

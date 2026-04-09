@@ -1,7 +1,7 @@
 import React from 'react';
 import keycloak from './config/keycloak';
 
-const Header = () => {
+const Header = ({ authenticated }) => {
   return (
     <header style={styles.header}>
       <div style={styles.container}>
@@ -10,15 +10,20 @@ const Header = () => {
           <h1 style={styles.title}>Collector<span style={styles.dot}>.</span>shop</h1>
         </div>
         <div style={styles.userGroup}>
-          <span style={styles.welcome}>Bonjour, <strong>{keycloak.tokenParsed?.preferred_username}</strong></span>
-          <button style={styles.logoutButton} onClick={() => keycloak.logout()}>Déconnexion</button>
+          {authenticated ? (
+            <>
+              <span style={styles.welcome}>Bonjour, <strong>{keycloak.tokenParsed?.preferred_username}</strong></span>
+              <button style={styles.logoutButton} onClick={() => keycloak.logout()}>Déconnexion</button>
+            </>
+          ) : (
+            <button style={styles.loginButton} onClick={() => keycloak.login()}>Se connecter</button>
+          )}
         </div>
       </div>
     </header>
   );
 };
 
-// Styles en ligne pour un contrôle total et "Zéro Configuration" CSS globale
 const styles = {
   header: {
     backgroundColor: 'var(--card-background)',
