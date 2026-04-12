@@ -14,21 +14,25 @@ vi.mock('./config/keycloak', () => ({
 
 describe('Header Component', () => {
   it('doit afficher le nom de l application et le logo', () => {
-    render(<Header />);
-    expect(screen.getByText(/Collector/i)).toBeInTheDocument();
+    render(<Header authenticated={false} />);
+    expect(screen.getByText(/collector/i)).toBeInTheDocument();
     expect(screen.getByText('C')).toBeInTheDocument();
   });
 
-  it('doit afficher le nom de l utilisateur connecté via Keycloak', () => {
-    render(<Header />);
+  it('doit afficher le nom de l utilisateur quand il est connecté', () => {
+    render(<Header authenticated={true} />);
     expect(screen.getByText(/MathisTest/i)).toBeInTheDocument();
   });
 
   it('doit appeler la fonction logout de Keycloak lors du clic sur le bouton', () => {
-    render(<Header />);
+    render(<Header authenticated={true} />);
     const logoutButton = screen.getByRole('button', { name: /Déconnexion/i });
-    
     fireEvent.click(logoutButton);
     expect(keycloak.logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('doit afficher le bouton de connexion quand l utilisateur est anonyme', () => {
+    render(<Header authenticated={false} />);
+    expect(screen.getByText(/Se connecter/i)).toBeInTheDocument();
   });
 });
