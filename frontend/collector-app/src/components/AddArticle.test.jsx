@@ -48,13 +48,10 @@ describe('AddArticle Component', () => {
   });
 
   it('doit afficher une erreur en console et une alerte si l API échoue', async () => {
-    // Arrange
     api.post.mockRejectedValue(new Error('Erreur API'));
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     render(<AddArticle onArticleAdded={mockOnArticleAdded} />);
-    
-    // CORRECTIF : On remplit les champs car ils sont "required" !
     fireEvent.change(screen.getByPlaceholderText(/Ex: Carte Pokémon/i), { 
       target: { value: 'Objet Test' } 
     });
@@ -62,10 +59,8 @@ describe('AddArticle Component', () => {
       target: { value: '10' } 
     });
 
-    // Act
     fireEvent.click(screen.getByRole('button', { name: /Publier l'annonce/i }));
 
-    // Assert
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Erreur de création'));
       expect(consoleSpy).toHaveBeenCalled();

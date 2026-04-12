@@ -15,4 +15,6 @@ docker build -t collector-front:latest ./frontend/collector-app
 
 ./scripts/setup/setup-apps.sh
 
+minikube addons enable ingress
+
 echo "OK"

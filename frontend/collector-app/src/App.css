@@ -1,33 +1,29 @@
 :root {
-  --primary-color: #2e7d32; 
-  --primary-dark: #1b5e20;
-  --primary-light: #a5d6a7;
-  --accent-color: #81c784;
-  --text-color: #1a1a1a;
-  --text-secondary: #757575;
-  --background-color: #f9f9f9;
-  --card-background: #ffffff;
-  --border-color: #e0e0e0;
-  --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  --font-family: 'Inter', system-ui, sans-serif;
+  --primary-color: #008248; 
+  --primary-hover: #006b3b;
+  --primary-light: #e6f3ed;
+  
+  --text-main: #111111;
+  --text-secondary: #666666;
+  --bg-color: #ffffff;
+  --bg-alt: #f8f8f8;
+  
+  --border: #ebedee;
+  --radius: 4px; 
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.08);
+  --font-family: 'Inter', -apple-system, sans-serif;
 }
 
 body {
   margin: 0;
   font-family: var(--font-family);
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background-color: var(--bg-color);
+  color: var(--text-main);
   -webkit-font-smoothing: antialiased;
 }
 
 .main-container {
-  max-width: 1200px;
+  max-width: 1050px;
   margin: 0 auto;
-  padding: 40px 20px;
-}
-
-button {
-  font-family: var(--font-family);
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  padding: 20px;
 }

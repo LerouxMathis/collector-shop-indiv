@@ -1,6 +1,13 @@
 {
   "realm": "collector-realm",
   "enabled": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "passwordPolicy": "upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and length(12) and notUsername(true)",
   "roles": {
     "realm": [
       { "name": "user", "description": "Utilisateur standard C2C" },
@@ -34,7 +41,7 @@
     {
       "username": "testuser",
       "enabled": true,
-      "credentials": [{ "type": "password", "value": "password", "temporary": false }],
+      "credentials": [{ "type": "password", "value": "Password123!", "temporary": false }],
       "realmRoles": ["user"]
     }
   ]

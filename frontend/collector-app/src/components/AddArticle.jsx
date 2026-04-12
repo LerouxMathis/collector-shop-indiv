@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../services/api';
-import './AddArticle.css'; // Import des styles du formulaire
+import './AddArticle.css';
 
 const AddArticle = ({ onArticleAdded }) => {
   const [title, setTitle] = useState('');

@@ -7,6 +7,8 @@ import './App.css';
 function App() {
   const [keycloakInitialized, setKeycloakInitialized] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  
 
   useEffect(() => {
     keycloak.init({ onLoad: 'check-sso', checkLoginIframe: false })
@@ -30,9 +32,16 @@ function App() {
 
     return (
     <div>
-      <Header authenticated={authenticated} />
+      <Header 
+        authenticated={authenticated} 
+        onSellClick={() => setShowAddForm(!showAddForm)} 
+      />
       <main className="main-container">
-        <Catalog authenticated={authenticated} />
+        <Catalog 
+          authenticated={authenticated} 
+          showAddForm={showAddForm}
+          setShowAddForm={setShowAddForm}
+        />
       </main>
     </div>
   );
