@@ -49,6 +49,7 @@ class ArticleControllerTest {
         Mockito.when(repository.findAll()).thenReturn(Arrays.asList(article1));
 
         mockMvc.perform(get("/api/articles")
+                .with(SecurityMockMvcRequestPostProcessors.jwt()) 
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title").value("Carte Dracaufeu"))
@@ -75,6 +76,7 @@ class ArticleControllerTest {
                 .andExpect(jsonPath("$.id").value(10L))
                 .andExpect(jsonPath("$.title").value("Console Retro"))
                 .andExpect(jsonPath("$.ownerId").value("mock-user-id"));
+        
         Mockito.verify(kafkaService, Mockito.times(1))
                .sendArticleCreatedEvent(10L, "Console Retro");
     }
