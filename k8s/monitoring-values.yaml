@@ -1,0 +1,84 @@
+# monitoring-values.yaml optimisé pour ressources limitées
+
+# 1. Configuration de Prometheus (Le plus lourd)
+prometheus:
+  prometheusSpec:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+    # Découverte automatique de tes microservices
+    additionalScrapeConfigs:
+      - job_name: 'spring-boot-collector'
+        metrics_path: '/actuator/prometheus'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - collector-app
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: (catalog-service|notification-service)
+          - source_labels: [__address__, __meta_kubernetes_pod_container_port_number]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+
+    storageSpec:
+      emptyDir:
+        medium: ""
+
+# 2. Configuration de Grafana (Moyen)
+grafana:
+  adminPassword: admin
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# 3. Kube-State-Metrics (Léger)
+kubeStateMetrics:
+  enabled: true
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 50m
+      memory: 128Mi
+
+# 4. Node Exporter (Très léger)
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 50m
+      memory: 64Mi
+
+# 5. Désactiver Alertmanager (Gain de place immédiat)
+alertmanager:
+  enabled: false
+
+# 6. Limiter l'Operator (Le cerveau de la stack)
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
